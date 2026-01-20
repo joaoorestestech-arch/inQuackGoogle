@@ -1,0 +1,5 @@
+{
+  "name": "Quack Bio Pages",
+  "description": "A dynamic link-in-bio store generator using Supabase, featuring products, services, and business information.",
+  "requestFramePermissions": []
+}

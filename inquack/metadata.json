@@ -1,0 +1,8 @@
+{
+  "name": "inQuack - Democratizando o Crescimento Digital",
+  "description": "Uma plataforma completa para pequenos e médios empreendedores: CRM, Microsites, IA Auxiliar e Gestão de Vendas com design minimalista e moderno.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
