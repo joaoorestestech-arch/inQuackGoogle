@@ -1,6 +1,7 @@
 
   import React from 'react';
   import { Sparkles, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+  import myImageTwo from '../img/moreinfo.png';
 
   interface HeroProps {
     onStart: () => void;
@@ -61,7 +62,7 @@
           <div className="flex-1 relative w-full max-w-lg lg:max-w-none">
             <div className="flex-1 relative w-full max-w-lg lg:max-w-none">
               <img 
-                src="../img/moreinfo.png" 
+                src={myImageTwo}
                 alt="inQuack Dashboard" 
                 className="w-full h-auto object-cover"
               />

@@ -56,7 +56,7 @@ interface DashboardProps {
 
 type Tab = 'home' | 'inbox' | 'quackpage' | 'sales' | 'menu' | 'products' | 'agenda' | 'ia';
 type AgendaSubTab = 'requests' | 'services' | 'hours';
-type SalesFilter = 'weekly' | 'semiannual' | 'annual';
+type SalesFilter = 'weekly' | 'semiannual';
 type InboxFilter = 'all' | 'products' | 'agenda' | 'payments';
 
 interface Product {
@@ -99,7 +99,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all');
   const [copied, setCopied] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  
+    
   // States for Data
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -117,6 +117,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [serviceForm, setServiceForm] = useState({ name: '', price: '', description: '', duration: '', image_url: '' });
   const [tempImageFile, setTempImageFile] = useState<File | null>(null);
   const [tempImagePreview, setTempImagePreview] = useState<string | null>(null);
+  const [activeServiceMenu, setActiveServiceMenu] = useState<string | null>(null);
 
   // Business Hours State
   const [businessHours, setBusinessHours] = useState<Record<string, { id?: string, active: boolean, open: string, close: string }>>({
@@ -159,6 +160,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     text_color: '#1A1A1A'
   });
   const [isPublishing, setIsPublishing] = useState(false);
+
+  const pendingAppointmentsCount = useMemo(() => 
+  appointments.filter(a => a.status === 'pending').length, 
+  [appointments]);
+
 
   // Initial Data Fetching
   useEffect(() => {
@@ -576,23 +582,41 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     return chartData.reduce((acc, curr) => acc + curr.value, 0);
   }, [chartData]);
 
-  const renderHome = () => (
+    const renderHome = () => (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { label: "Produtos", icon: <ShoppingBag size={24} />, tab: 'products' },
-          { label: "Agenda", icon: <Calendar size={24} />, tab: 'agenda' },
-          { label: "Relatório", icon: <BarChart3 size={24} />, tab: 'sales' },
-          { label: "IA", icon: <Zap size={24} />, tab: 'ia' },
-        ].map((action, i) => (
-          <div key={i} onClick={() => setActiveTab(action.tab as Tab)} className="flex flex-col items-center gap-3 group cursor-pointer">
-            <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-brand-muted group-hover:bg-brand-primary group-hover:text-brand-dark transition-all shadow-sm">
-              {action.icon}
+    <div className="grid grid-cols-4 gap-4">
+      {[
+        { label: "Produtos", icon: <ShoppingBag size={24} />, tab: 'products', badge: null },
+        {
+          label: "Agenda",
+          icon: <Calendar size={24} />,
+          tab: 'agenda',
+          badge: pendingAppointmentsCount > 0 ? pendingAppointmentsCount : null
+        },
+        { label: "Relatório", icon: <BarChart3 size={24} />, tab: 'sales',badge: null },
+        { label: "IA", icon: <Zap size={24} />, tab: 'ia', badge: null },
+      ].map((action, i) => (
+        <div key={i} onClick={() => setActiveTab(action.tab as Tab)} className="flex flex-col items-center gap-3 group cursor-pointer">
+          <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-brand-muted group-hover:bg-brand-primary group-hover:text-brand-dark transition-all shadow-sm relative">
+            {action.icon}
+            
+            {/* BADGE REFINADO - CANTO INFERIOR DIREITO */}
+            {action.badge !== null && (
+            <div className="absolute -bottom-2 -right-2">
+              <div className="h-7 w-7 rounded-full bg-white flex items-center justify-center shadow-sm">
+                <div className="h-5 w-5 rounded-full bg-[#EAB308] flex items-center justify-center">
+                  <span className="text-[10px] font-black text-black leading-none">
+                    {action.badge}
+                  </span>
+                </div>
+              </div>
             </div>
-            <span className="text-xs  font-bold text-brand-muted uppercase tracking-wider">{action.label}</span>
+            )}
           </div>
-        ))}
-      </div>
+          <span className="text-[10px] font-black text-brand-muted uppercase tracking-[0.1em]">{action.label}</span>
+        </div>
+      ))}
+    </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
@@ -645,10 +669,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     </div>
   );
 
-  const renderProducts = () => (
-    <div className="space-y-6 animate-in slide-in-from-right duration-300">
-      <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-black text-brand-dark tracking-tight">Produtos</h3>
+    const renderProducts = () => (
+    <div className="space-y-6 animate-in slide-in-from-right duration-300 pb-20">
+      {/* Header Fixo/Sticky para Mobile */}
+      <div className="flex items-center justify-between sticky top-[88px] bg-brand-bg/80 backdrop-blur-md z-20 py-2">
+        <h3 className="text-xl font-black text-brand-dark tracking-tight">Produtos</h3>
         <button 
           onClick={() => { 
             setEditingItem(null); 
@@ -657,37 +682,44 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             setTempImagePreview(null);
             setShowProductModal(true); 
           }}
-          className="flex items-center gap-2 bg-brand-dark text-white px-6 py-3 rounded-2xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-brand-dark/10"
+          className="flex items-center gap-2 bg-brand-dark text-white px-4 py-2.5 rounded-xl font-bold text-xs hover:opacity-90 transition-all shadow-lg"
         >
-          <Plus size={18} />
-          Novo Produto
+          <Plus size={16} />
+          Novo
         </button>
       </div>
 
       {products.length === 0 ? (
-        <div className="bg-white p-12 rounded-[2.5rem] border border-dashed border-gray-300 text-center space-y-4">
-          <div className="w-16 h-16 bg-brand-soft rounded-full flex items-center justify-center mx-auto text-brand-muted">
-            <ShoppingBag size={32} />
+        <div className="bg-white p-10 rounded-[2rem] border border-dashed border-gray-300 text-center space-y-4">
+          <div className="w-14 h-14 bg-brand-soft rounded-full flex items-center justify-center mx-auto text-brand-muted">
+            <ShoppingBag size={28} />
           </div>
-          <div>
-            <p className="font-bold text-brand-dark">Nenhum produto cadastrado</p>
-            <p className="text-sm text-brand-muted">Comece adicionando seu primeiro item de venda.</p>
-          </div>
+          <p className="font-bold text-brand-dark text-sm">Nenhum produto cadastrado</p>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {products.map((p) => (
-            <div key={p.id} className="bg-white p-4 rounded-3xl border border-gray-50 shadow-sm flex items-center gap-4 group">
-              <img src={p.image_url} className="w-20 h-20 rounded-2xl object-cover bg-brand-soft" alt={p.name} />
-              <div className="flex-1">
-                <h4 className="font-bold text-brand-dark">{p.name}</h4>
-                <p className="text-xs text-brand-muted line-clamp-1">{p.description}</p>
-                <div className="mt-2 flex items-center gap-4">
+            <div key={p.id} className="bg-white p-3 rounded-2xl border border-gray-50 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-transform">
+              {/* Thumbnail Reduzida para Mobile */}
+              <div className="relative flex-shrink-0">
+                <img src={p.image_url} className="w-16 h-16 rounded-xl object-cover bg-brand-soft" alt={p.name} />
+                {p.quantity <= 5 && (
+                  <span className="absolute -top-1 -left-1 w-4 h-4 bg-red-500 border-2 border-white rounded-full"></span>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-brand-dark text-sm truncate">{p.name}</h4>
+                <div className="flex items-center gap-2 mt-1">
                   <span className="text-brand-dark font-black text-sm">R$ {p.price}</span>
-                  <span className="text-[10px] font-bold text-brand-muted uppercase bg-brand-soft px-2 py-0.5 rounded-full">Qtd: {p.quantity}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${p.quantity > 0 ? 'bg-brand-soft text-brand-muted' : 'bg-red-50 text-red-500'}`}>
+                    Estoque: {p.quantity}
+                  </span>
                 </div>
               </div>
-              <div className="flex gap-2">
+
+              {/* Ações Compactas */}
+              <div className="flex flex-col gap-1">
                 <button 
                   onClick={() => { 
                     setEditingItem(p); 
@@ -695,20 +727,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                     setTempImagePreview(p.image_url);
                     setShowProductModal(true); 
                   }}
-                  className="p-3 bg-brand-soft text-brand-muted rounded-2xl hover:bg-brand-primary hover:text-brand-dark transition-all"
+                  className="p-2.5 bg-brand-soft text-brand-muted rounded-lg"
                 >
-                  <Edit3 size={18} />
+                  <Edit3 size={16} />
                 </button>
                 <button 
                   onClick={async () => {
-                    if (confirm('Deseja realmente excluir este produto?')) {
+                    if (confirm('Excluir produto?')) {
                       await supabase.from('products').delete().eq('id', p.id);
                       setProducts(products.filter(item => item.id !== p.id));
                     }
                   }}
-                  className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all"
+                  className="p-2.5 bg-red-50 text-red-400 rounded-lg"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={16} />
                 </button>
               </div>
             </div>
@@ -778,124 +810,174 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           {appointments.filter(a => a.status === 'pending').length === 0 && <p className="text-center py-10 text-brand-muted font-medium">Nenhum agendamento pendente.</p>}
         </div>
       )}
-
       {agendaSubTab === 'services' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in duration-300">
           <div className="flex items-center justify-between px-2">
-            <h4 className="text-sm font-bold text-brand-muted uppercase tracking-widest">Meus Serviços</h4>
+            <h4 className="text-[10px] font-black text-brand-muted uppercase tracking-[0.2em]">Meus Serviços</h4>
             <button 
               onClick={() => { 
                 setEditingItem(null); 
                 setServiceForm({ name: '', price: '', description: '', duration: '', image_url: '' });
-                setTempImageFile(null);
                 setTempImagePreview(null);
                 setShowServiceModal(true); 
               }}
-              className="text-brand-primary font-bold text-xs flex items-center gap-1"
+              className="bg-brand-primary/10 text-brand-dark font-black text-[10px] px-3 py-1.5 rounded-lg flex items-center gap-1"
             >
               <Plus size={14} /> ADICIONAR
             </button>
           </div>
-          <div className="grid gap-4">
-            {services.map(s => (
-              <div key={s.id} className={`bg-white p-4 rounded-3xl border border-gray-50 shadow-sm flex items-center gap-4 transition-opacity ${!s.active ? 'opacity-50' : ''}`}>
-                <img src={s.image_url} className="w-16 h-16 rounded-2xl object-cover bg-brand-soft" alt={s.name} />
-                <div className="flex-1">
-                  <h4 className="font-bold text-brand-dark text-sm">{s.name}</h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-brand-dark font-black text-xs">R$ {s.price}</span>
-                    <span className="text-[10px] text-brand-muted font-bold uppercase tracking-tighter bg-brand-soft px-2 rounded-full">{s.duration}</span>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <button 
-                    onClick={async () => { 
-                      const nextState = !s.active;
-                      await supabase.from('services').update({ active: nextState }).eq('id', s.id);
-                      setServices(services.map(item => item.id === s.id ? { ...item, active: nextState } : item));
-                    }}
-                    className={`p-2 rounded-xl transition-all ${s.active ? 'bg-emerald-50 text-emerald-500' : 'bg-gray-100 text-gray-400'}`}
-                  >
-                    <Power size={16} />
-                  </button>
-                  <button 
-                    onClick={() => { 
-                      setEditingItem(s); 
-                      setServiceForm({ ...s, price: s.price.toString() }); 
-                      setTempImagePreview(s.image_url);
-                      setShowServiceModal(true); 
-                    }}
-                    className="p-2 bg-brand-soft text-brand-muted rounded-xl"
-                  >
-                    <Edit3 size={16} />
-                  </button>
-                  <button 
-                    onClick={async () => {
-                      if (confirm('Deseja realmente excluir este serviço?')) {
-                        await supabase.from('services').delete().eq('id', s.id);
-                        setServices(services.filter(item => item.id !== s.id));
-                      }
-                    }}
-                    className="p-2 bg-red-50 text-red-400 rounded-xl"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {agendaSubTab === 'hours' && (
-        <div className="bg-white rounded-[2.5rem] p-4 sm:p-8 border border-gray-50 shadow-sm space-y-6">
-          <h4 className="text-lg font-black text-brand-dark">Horários de Funcionamento</h4>
-          <div className="space-y-4">
-            {(Object.entries(businessHours) as [string, { id?: string, active: boolean, open: string, close: string }][]).map(([day, config]) => (
-              <div key={day} className="flex flex-col gap-4 pb-4 border-b border-gray-50 last:border-0">
-                <div className="flex flex-wrap items-center justify-between gap-y-3">
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => setBusinessHours(prev => ({ ...prev, [day]: { ...prev[day], active: !prev[day].active } }))}
-                      className={`w-12 h-6 rounded-full relative transition-colors flex-shrink-0 ${config.active ? 'bg-brand-dark' : 'bg-gray-200'}`}
-                    >
-                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${config.active ? 'right-1' : 'left-1'}`}></div>
-                    </button>
-                    <span className={`font-bold transition-colors ${config.active ? 'text-brand-dark' : 'text-gray-300'}`}>{day}</span>
-                  </div>
-                  {config.active ? (
-                    <div className="flex items-center gap-2 sm:gap-3 animate-in fade-in zoom-in-95 duration-200">
-                      <input 
-                        type="time" 
-                        value={config.open} 
-                        onChange={e => setBusinessHours(prev => ({ ...prev, [day]: { ...prev[day], open: e.target.value } }))}
-                        className="bg-brand-soft px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold outline-none border-none" 
-                      />
-                      <span className="text-brand-muted text-[10px] sm:text-xs font-medium">até</span>
-                      <input 
-                        type="time" 
-                        value={config.close} 
-                        onChange={e => setBusinessHours(prev => ({ ...prev, [day]: { ...prev[day], close: e.target.value } }))}
-                        className="bg-brand-soft px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold outline-none border-none" 
-                      />
-                    </div>
-                  ) : (
-                    <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest italic">Fechado</span>
-                  )}
+          <div className="grid gap-3">
+        {services.map(s => (
+          <div key={s.id} className={`relative bg-white p-3 rounded-2xl border border-gray-50 shadow-sm flex items-center gap-3 transition-all ${!s.active ? 'opacity-60' : ''}`}>
+            
+            {/* 1. Thumbnail com tamanho fixo - flex-shrink-0 impede que ela esmague */}
+            <div className="relative flex-shrink-0">
+              <img src={s.image_url} className="w-14 h-14 rounded-xl object-cover bg-brand-soft" alt={s.name} />
+              {!s.active && (
+                <div className="absolute inset-0 bg-white/40 flex items-center justify-center rounded-xl">
+                  <Power size={14} className="text-brand-muted" />
+                </div>
+              )}
+            </div>
+
+            {/* 2. Container de Texto com min-w-0 - ISSO É O SEGREDO */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+              <h4 className="font-bold text-brand-dark text-sm truncate pr-2">
+                {s.name}
+              </h4>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-brand-dark font-black text-xs whitespace-nowrap">
+                  R$ {s.price}
+                </span>
+                {/* Duração com truncate também, caso o texto seja customizado e longo */}
+                <span className="text-[9px] text-brand-muted font-bold uppercase bg-brand-soft px-2 py-0.5 rounded-full truncate max-w-[80px]">
+                  {s.duration}
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Botão de Ação - flex-shrink-0 garante que ele sempre apareça */}
+            <button 
+              onClick={() => setActiveServiceMenu(s.id)}
+              className="flex-shrink-0 p-3 -mr-1 hover:bg-gray-50 rounded-xl text-brand-muted active:scale-90 transition-all"
+            >
+              <Settings size={20} />
+            </button>
+
+            {/* O Action Sheet (Menu inferior) permanece igual ao anterior */}
+            {activeServiceMenu === s.id && (
+              <>
+                            {/* Backdrop para fechar ao clicar fora */}
+                            <div 
+                              className="fixed inset-0 z-60 bg-brand-dark/20 backdrop-blur-[2px]" 
+                              onClick={() => setActiveServiceMenu(null)}
+                            />
+                            <div className="fixed bottom-14 left-0 right-0 z-70 bg-white rounded-t-[2.5rem] p-6 pb-10 shadow-2xl animate-in slide-in-from-bottom duration-300">
+                              <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6" />
+                              
+                              <h5 className="text-center font-black text-brand-dark mb-6 tracking-tight">Gerenciar Serviço</h5>
+                              
+                              <div className="space-y-2">
+                                <button 
+                                  onClick={async () => {
+                                    const nextState = !s.active;
+                                    await supabase.from('services').update({ active: nextState }).eq('id', s.id);
+                                    setServices(services.map(item => item.id === s.id ? { ...item, active: nextState } : item));
+                                    setActiveServiceMenu(null);
+                                  }}
+                                  className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-sm transition-colors ${s.active ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-600'}`}
+                                >
+                                  <Power size={18} />
+                                  {s.active ? 'Pausar Serviço' : 'Ativar Serviço'}
+                                </button>
+
+                                <button 
+                                  onClick={() => {
+                                    setEditingItem(s);
+                                    setServiceForm({ ...s, price: s.price.toString() });
+                                    setTempImagePreview(s.image_url);
+                                    setShowServiceModal(true);
+                                    setActiveServiceMenu(null);
+                                  }}
+                                  className="w-full flex items-center gap-4 p-4 bg-brand-soft rounded-2xl font-bold text-sm text-brand-dark"
+                                >
+                                  <Edit3 size={18} />
+                                  Editar Informações
+                                </button>
+
+                                <button 
+                                  onClick={async () => {
+                                    if (confirm('Deseja excluir este serviço?')) {
+                                      await supabase.from('services').delete().eq('id', s.id);
+                                      setServices(services.filter(item => item.id !== s.id));
+                                      setActiveServiceMenu(null);
+                                    }
+                                  }}
+                                  className="w-full flex items-center gap-4 p-4 bg-red-50 rounded-2xl font-bold text-sm text-red-500"
+                                >
+                                  <Trash2 size={18} />
+                                  Excluir Permanentemente
+                                </button>
+                              </div>
+                            </div>
+                          </>
+            )}
+          </div>
+        ))}
                 </div>
               </div>
-            ))}
+            )}
+
+            {agendaSubTab === 'hours' && (
+              <div className="bg-white rounded-[2.5rem] p-4 sm:p-8 border border-gray-50 shadow-sm space-y-6">
+                <h4 className="text-lg font-black text-brand-dark">Horários de Funcionamento</h4>
+                <div className="space-y-4">
+                  {(Object.entries(businessHours) as [string, { id?: string, active: boolean, open: string, close: string }][]).map(([day, config]) => (
+                    <div key={day} className="flex flex-col gap-4 pb-4 border-b border-gray-50 last:border-0">
+                      <div className="flex flex-wrap items-center justify-between gap-y-3">
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={() => setBusinessHours(prev => ({ ...prev, [day]: { ...prev[day], active: !prev[day].active } }))}
+                            className={`w-12 h-6 rounded-full relative transition-colors flex-shrink-0 ${config.active ? 'bg-brand-dark' : 'bg-gray-200'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${config.active ? 'right-1' : 'left-1'}`}></div>
+                          </button>
+                          <span className={`font-bold transition-colors ${config.active ? 'text-brand-dark' : 'text-gray-300'}`}>{day}</span>
+                        </div>
+                        {config.active ? (
+                          <div className="flex items-center gap-2 sm:gap-3 animate-in fade-in zoom-in-95 duration-200">
+                            <input 
+                              type="time" 
+                              value={config.open} 
+                              onChange={e => setBusinessHours(prev => ({ ...prev, [day]: { ...prev[day], open: e.target.value } }))}
+                              className="bg-brand-soft px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold outline-none border-none" 
+                            />
+                            <span className="text-brand-muted text-[10px] sm:text-xs font-medium">até</span>
+                            <input 
+                              type="time" 
+                              value={config.close} 
+                              onChange={e => setBusinessHours(prev => ({ ...prev, [day]: { ...prev[day], close: e.target.value } }))}
+                              className="bg-brand-soft px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold outline-none border-none" 
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest italic">Fechado</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  onClick={handleUpdateBusinessHours}
+                  className="w-full bg-brand-dark text-white py-4 rounded-2xl font-bold shadow-lg shadow-brand-dark/10 active:scale-95 transition-all"
+                >
+                  Salvar Configurações
+                </button>
+              </div>
+            )}
           </div>
-          <button 
-            onClick={handleUpdateBusinessHours}
-            className="w-full bg-brand-dark text-white py-4 rounded-2xl font-bold shadow-lg shadow-brand-dark/10 active:scale-95 transition-all"
-          >
-            Salvar Configurações
-          </button>
-        </div>
-      )}
-    </div>
-  );
+        );
 
   const renderIaChat = () => (
     <div className="flex flex-col h-[calc(100vh-250px)] animate-in slide-in-from-bottom duration-300">
@@ -964,7 +1046,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         </button>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 overflow-hidden">
+      <div className="bg-white rounded-[1.5rem] shadow-sm border border-gray-50 overflow-hidden">
         {/* Hidden inputs for banner/profile selection */}
         <input 
           type="file" 
@@ -1162,24 +1244,31 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const renderSales = () => (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
-      <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-black text-brand-dark tracking-tight">Relatórios de Vendas</h3>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <h3 className="text-2xl font-black text-brand-dark tracking-tight">
+          Relatórios de Vendas
+        </h3>
+
         <div className="flex bg-white rounded-2xl p-1 border border-gray-100 shadow-sm">
           {[
             { id: 'weekly', label: 'Semanal' },
-            { id: 'semiannual', label: 'Semestral' },
-            { id: 'annual', label: 'Anual' }
+            { id: 'semiannual', label: 'Semestral' }
           ].map(f => (
             <button 
               key={f.id}
               onClick={() => setSalesFilter(f.id as SalesFilter)}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${salesFilter === f.id ? 'bg-brand-dark text-white' : 'text-brand-muted hover:bg-brand-soft'}`}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                salesFilter === f.id
+                  ? 'bg-brand-dark text-white'
+                  : 'text-brand-muted hover:bg-brand-soft'
+              }`}
             >
               {f.label}
             </button>
           ))}
         </div>
       </div>
+
 
       {/* CARD DE FATURAMENTO E GRÁFICO */}
       <div className="bg-white p-8 rounded-[1.5rem] border border-gray-50 shadow-sm">

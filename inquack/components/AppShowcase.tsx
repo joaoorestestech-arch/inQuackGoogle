@@ -1,5 +1,6 @@
 
 import React from 'react';
+import myImage from '../img/moreinfo2.png';
 
 const AppShowcase: React.FC = () => {
   return (
@@ -11,7 +12,7 @@ const AppShowcase: React.FC = () => {
               <div className="absolute -inset-1 rounded-[3rem] blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
               <div className="relative rounded-[3rem] overflow-hidden p-4">
                  <img 
-                  src="../img/moreinfo2.png" 
+                  src={myImage} 
                   alt="App interface" 
                   className="rounded-[2rem] w-full"
                 />
