@@ -5,6 +5,7 @@ import {
   ShoppingBag, 
   Calendar, 
   BarChart3, 
+  UserRound,
   Zap, 
   Home, 
   MessageSquare, 
@@ -48,6 +49,7 @@ import {
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from '../lib/supabase';
 import Logo from '../img/logoQuack.svg?react';
+import CRM from './CRM';
 
 interface DashboardProps {
   user: { name: string; email: string } | null;
@@ -66,6 +68,7 @@ interface Product {
   quantity: number;
   description: string;
   image_url: string;
+  status: 'F' | 'D';
 }
 
 interface Service {
@@ -113,7 +116,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [isUploading, setIsUploading] = useState(false);
 
   // Form States
-  const [productForm, setProductForm] = useState({ name: '', price: '', quantity: 0, description: '', image_url: '' });
+  const [productForm, setProductForm] = useState({ name: '', price: '', quantity: 0, description: '', image_url: '', status:'F' as 'F' | 'D' });
   const [serviceForm, setServiceForm] = useState({ name: '', price: '', description: '', duration: '', image_url: '' });
   const [tempImageFile, setTempImageFile] = useState<File | null>(null);
   const [tempImagePreview, setTempImagePreview] = useState<string | null>(null);
@@ -157,20 +160,87 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     pinterest: '',
     published: false,
     primary_color: '#FFD700',
-    text_color: '#1A1A1A'
+    text_color: '#1A1A1A',
+    bg_color: '#F4F4F4', 
+    pd_layout: 'grid',   
+    slug: ''
   });
   const [isPublishing, setIsPublishing] = useState(false);
+  const [slugError, setSlugError] = useState(false);
 
   const pendingAppointmentsCount = useMemo(() => 
   appointments.filter(a => a.status === 'pending').length, 
   [appointments]);
 
+  const sanitizeSlug = (text: string) => {
+  return text
+    .toString()
+    .normalize("NFD")                   // Decompõe caracteres acentuados (ex: á -> a + ´)
+    .replace(/[\u0300-\u036f]/g, "")    // Remove os acentos
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")               // Substitui espaços por hifens
+    .replace(/[^\w-]+/g, "")            // Remove tudo que não for letra, número ou hífen
+    .replace(/--+/g, "-");              // Substitui múltiplos hifens por um único
+  };
+
+  const [clients, setClients] = useState<any[]>([]);
+
+  const syncClientData = async (data: {
+  client_name: string;
+  client_phone?: string;
+  amount: number;
+  item_name: string;
+  type: 'product' | 'service';
+  }) => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      // 1. Tenta buscar o cliente existente pelo nome (ou telefone, se preferir)
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .eq('client_name', data.client_name)
+        .maybeSingle();
+
+      const payload = {
+        user_id: authUser.id,
+        client_name: data.client_name,
+        client_phone: data.client_phone || (existingClient?.client_phone),
+        sum_price: (existingClient?.sum_price || 0) + data.amount,
+        last_service: data.type === 'service' ? data.item_name : (existingClient?.last_service),
+        last_product: data.type === 'product' ? data.item_name : (existingClient?.last_product),
+        last_date: new Date().toISOString(),
+      };
+
+      if (existingClient) {
+        // Atualiza cliente existente
+        await supabase.from('clients').update(payload).eq('id', existingClient.id);
+      } else {
+        // Insere novo cliente
+        await supabase.from('clients').insert([payload]);
+      }
+
+      // 2. Atualiza o estado local para refletir no CRM imediatamente
+      const { data: updatedClients } = await supabase.from('clients').select('*').eq('user_id', authUser.id);
+      if (updatedClients) setClients(updatedClients);
+
+    } catch (error) {
+      console.error("Erro ao sincronizar cliente:", error);
+    }
+  };
 
   // Initial Data Fetching
   useEffect(() => {
     const fetchData = async () => {
+
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
+
+      const { data: clientsData } = await supabase.from('clients').select('*').eq('user_id', authUser.id);
+      if (clientsData) setClients(clientsData);
 
       setIsLoadingData(true);
       try {
@@ -285,13 +355,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       }
 
       const payload = {
-        name: productForm.name,
-        price: parseFloat(productForm.price),
-        quantity: productForm.quantity,
-        description: productForm.description,
-        image_url: imageUrl,
-        user_id: authUser.id,
-        updated_at: new Date().toISOString()
+          name: productForm.name,
+          price: parseFloat(productForm.price),
+          quantity: productForm.quantity,
+          description: productForm.description,
+          image_url: imageUrl,
+          status: productForm.status, // Inserido no payload
+          user_id: authUser.id,
+          updated_at: new Date().toISOString()
       };
 
       if (editingItem) {
@@ -476,32 +547,77 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   };
 
   const handlePublish = async () => {
-    setIsPublishing(true);
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+  setSlugError(false);
+  setIsPublishing(true);
+  
+  const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) return;
 
     try {
-      const payload = {
-        ...quackConfig,
-        user_id: authUser.id,
-        published: true,
-        updated_at: new Date().toISOString()
-      };
-      
-      if (!payload.id) delete payload.id;
+      // 1. Gerar o slug atual para validação
+      const currentSlug = quackConfig.slug || quackConfig.store_name
+        .toLowerCase().trim()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-");
 
-      const { data, error } = await supabase.from('quack_pages').upsert(payload, { onConflict: 'user_id' }).select().single();
-      if (!error && data) {
+      // 2. Verificar se o slug já existe para OUTRO usuário
+      const { data: existingPage, error: checkError } = await supabase
+        .from('quack_pages')
+        .select('user_id')
+        .eq('slug', currentSlug)
+        .single();
+
+      if (existingPage && existingPage.user_id !== authUser.id) {
+        setSlugError(true);
+        setIsPublishing(false);
+        return; // Interrompe a publicação
+      }
+
+    const payload = {
+      store_name: quackConfig.store_name,
+      address: quackConfig.address,
+      bio: quackConfig.bio,
+      banner_url: quackConfig.banner_url,
+      profile_url: quackConfig.profile_url,
+      show_products: quackConfig.show_products,
+      show_services: quackConfig.show_services,
+      whatsapp: quackConfig.whatsapp,
+      facebook: quackConfig.facebook,
+      instagram: quackConfig.instagram,
+      twitter: quackConfig.twitter,
+      telegram: quackConfig.telegram,
+      tiktok: quackConfig.tiktok,
+      youtube: quackConfig.youtube,
+      linkedin: quackConfig.linkedin,
+      pinterest: quackConfig.pinterest,
+      primary_color: quackConfig.primary_color,
+      text_color: quackConfig.text_color,
+      bg_color: quackConfig.bg_color,
+      pd_layout: quackConfig.pd_layout,
+      published: true,
+      user_id: authUser.id,
+      slug: currentSlug, // Garantimos o slug aqui
+      updated_at: new Date().toISOString()
+    };
+    
+    const { data, error } = await supabase
+        .from('quack_pages')
+        .upsert(payload, { onConflict: 'user_id' })
+        .select().single();
+
+      if (error) throw error;
+      if (data) {
         setQuackConfig(data);
         alert('Sua Quackpage foi publicada com sucesso!');
       }
     } catch (error) {
-      console.error(error);
+      console.error("Erro ao publicar:", error);
+      alert('Erro ao salvar. Tente novamente.');
     } finally {
       setIsPublishing(false);
     }
-  };
-
+  }
 
   const chartData = useMemo(() => {
     const now = new Date();
@@ -708,8 +824,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 )}
               </div>
 
+
+
               <div className="flex-1 min-w-0">
                 <h4 className="font-bold text-brand-dark text-sm truncate">{p.name}</h4>
+                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${
+                  p.status === 'F' ? 'bg-amber-200 text-amber-600 border border-amber-400' : 'bg-green-100 text-green-800 border border-green-200'}`}>{p.status === 'F' ? 'Físico' : 'Digital'}
+                </span>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-brand-dark font-black text-sm">R$ {p.price}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${p.quantity > 0 ? 'bg-brand-soft text-brand-muted' : 'bg-red-50 text-red-500'}`}>
@@ -1089,15 +1210,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
         <div className="pt-14 p-8 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-brand-muted uppercase">Nome do Estabelecimento</label>
-              <input 
-                type="text" 
-                value={quackConfig.store_name}
-                onChange={e => setQuackConfig({...quackConfig, store_name: e.target.value})}
-                className="w-full bg-brand-soft px-4 py-3 rounded-2xl outline-none" 
-              />
-            </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-brand-muted uppercase">Nome do Estabelecimento</label>
+                <input 
+                  type="text" 
+                  value={quackConfig.store_name}
+                  onChange={e => {
+                    setSlugError(false); // Limpa o erro ao digitar
+                    setQuackConfig({...quackConfig, store_name: e.target.value, slug: sanitizeSlug(e.target.value)});
+                  }}
+                  className={`w-full bg-brand-soft px-4 py-3 rounded-2xl outline-none border-2 transition-all ${slugError ? 'border-red-500' : 'border-transparent focus:border-brand-primary'}`} 
+                />
+                {slugError && (
+                  <p className="text-red-500 text-[10px] font-bold mt-1 ml-2 animate-in fade-in slide-in-from-top-1">
+                    Este nome de site já está em uso. Favor escolha outro.
+                  </p>
+                )}
+              </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-brand-muted uppercase">Endereço (Opcional)</label>
               <input 
@@ -1232,6 +1361,54 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 <Type size={18} className="text-brand-muted mr-2" />
               </div>
             </div>
+            
+            {/* Cor de Fundo */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-brand-muted uppercase ml-2">Cor de Fundo da Página</label>
+              <div className="flex items-center gap-3 bg-brand-soft p-2 rounded-2xl border border-transparent focus-within:border-brand-primary transition-all">
+                <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-white shadow-sm flex-shrink-0">
+                  <input 
+                    type="color" 
+                    value={quackConfig.bg_color || '#F4F4F4'}
+                    onChange={e => setQuackConfig({...quackConfig, bg_color: e.target.value})}
+                    className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
+                  />
+                </div>
+                <input 
+                  type="text"
+                  maxLength={7}
+                  value={quackConfig.bg_color || '#F4F4F4'}
+                  onChange={e => setQuackConfig({...quackConfig, bg_color: e.target.value})}
+                  className="flex-1 bg-transparent outline-none text-sm font-bold text-brand-dark uppercase"
+                  placeholder="#F4F4F4"
+                />
+                <ImageIcon size={18} className="text-brand-muted mr-2" />
+              </div>
+            </div>
+
+            {/* Seletor de Layout de Produtos */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-brand-muted uppercase ml-2">Layout dos Produtos</label>
+              <div className="flex bg-brand-soft p-1 rounded-2xl border border-gray-100">
+                <button
+                  onClick={() => setQuackConfig({...quackConfig, pd_layout: 'grid'})}
+                  className={`flex-1 py-5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-all ${
+                    quackConfig.pd_layout === 'grid' ? 'bg-white text-brand-dark shadow-sm' : 'text-brand-muted'
+                  }`}
+                >
+                  <Layout size={14} /> Galeria
+                </button>
+                <button
+                  onClick={() => setQuackConfig({...quackConfig, pd_layout: 'list'})}
+                  className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-all ${
+                    quackConfig.pd_layout === 'list' ? 'bg-white text-brand-dark shadow-sm' : 'text-brand-muted'
+                  }`}
+                >
+                  <MenuIcon size={14} /> Lista
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -1531,7 +1708,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             onClick={copyLink}
             className="flex items-center gap-2 bg-brand-soft px-4 py-2.5 rounded-2xl text-xs font-bold text-brand-dark hover:bg-gray-200 transition-all border border-gray-100"
           >
-            <span className="hidden sm:inline">inquack.com/{quackConfig.store_name?.toLowerCase().replace(/\s/g, '') || user?.name?.toLowerCase().replace(/\s/g, '') || 'usuario'}</span>
+            <span className="hidden sm:inline">inquack.com/{quackConfig.slug || user?.name?.toLowerCase().replace(/\s/g, '') || 'usuario'}</span>
             <Copy size={16} className={copied ? "text-green-500" : "text-brand-muted"} />
           </button>
         </div>
@@ -1546,6 +1723,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         {activeTab === 'sales' && renderSales()}
         {activeTab === 'menu' && renderMenu()}
         {activeTab === 'inbox' && renderInbox()}
+        {activeTab === 'CRM' && <CRM clients={clients} />}
+        
       </main>
 
       {/* Product Modal */}
@@ -1588,6 +1767,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               <div className="space-y-2">
                 <label className="text-xs font-bold text-brand-muted uppercase">Quantidade em estoque</label>
                 <input required value={productForm.quantity} onChange={e => setProductForm({...productForm, quantity: parseInt(e.target.value) || 0})} type="number" className="w-full bg-brand-soft px-4 py-3 rounded-2xl outline-none" placeholder="10" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-brand-muted uppercase">Tipo de Produto</label>
+                <div className="flex bg-brand-soft p-1 rounded-2xl border border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setProductForm({ ...productForm, status: 'F' })}
+                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${
+                      productForm.status === 'F' ? 'bg-white text-brand-dark shadow-sm' : 'text-brand-muted'
+                    }`}
+                  >
+                    Físico (F)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProductForm({ ...productForm, status: 'D' })}
+                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${
+                      productForm.status === 'D' ? 'bg-white text-brand-dark shadow-sm' : 'text-brand-muted'
+                    }`}
+                  >
+                    Digital (D)
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-brand-muted uppercase">Breve Descrição</label>
@@ -1661,6 +1863,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         </div>
       )}
 
+      {/* Render CRM */}
+
+
+
+
       {/* Fixed Bottom Navbar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-100 px-6 py-3 z-40">
         <div className="max-w-md mx-auto flex items-center justify-between">
@@ -1680,9 +1887,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </div>
             <span className={`text-[10px] font-bold uppercase mt-1 transition-colors ${activeTab === 'quackpage' ? 'text-brand-primary' : 'text-brand-muted'}`}>Quackpage</span>
           </button>
-          <button onClick={() => setActiveTab('sales')} className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'sales' ? 'text-brand-primary' : 'text-brand-muted'}`}>
-            <BarChart3 size={24} />
-            <span className="text-[10px] font-bold uppercase">Vendas</span>
+          <button onClick={() => setActiveTab('CRM')} className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'CRM' ? 'text-brand-primary' : 'text-brand-muted'}`}>
+            <UserRound size={24} />
+            <span className="text-[10px] font-bold uppercase">CRM</span>
           </button>
           <button onClick={() => setActiveTab('menu')} className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'menu' ? 'text-brand-primary' : 'text-brand-muted'}`}>
             <MenuIcon size={24} />

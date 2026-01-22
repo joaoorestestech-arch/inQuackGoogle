@@ -264,7 +264,7 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin, onSignupSucces
                       <div className="relative flex items-center">
                         <div className="absolute left-4 text-gray-400 flex items-center gap-1 font-medium select-none pointer-events-none">
                             <LinkIcon size={18} />
-                            <span>quack.page/</span>
+                            <span>inquack.com/</span>
                         </div>
                         <input 
                             type="text" 

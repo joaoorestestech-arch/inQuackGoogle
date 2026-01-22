@@ -193,7 +193,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ service, pag
             service_id: service.id,
             appointment_date: selectedDate.toISOString().split('T')[0],
             appointment_time: selectedSlot,
-            duration: service.duration || '60 min', // Save original duration string
+            duration: service.duration || '1 hora', // Save original duration string
             cellphone: formData.phone,
             status: 'pending'
         };
