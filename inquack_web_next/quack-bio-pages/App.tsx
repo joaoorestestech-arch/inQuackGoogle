@@ -130,11 +130,13 @@ const ProfileViewer = () => {
 
     const primaryColor = page.primary_color || '#fb923c';
     const textColor = page.text_color || '#1f2937';
+    const backgroundColor = page.bg_color || '#f9fafb';
     const showProductsTab = page.show_products && products.length > 0;
     const showServicesTab = page.show_services && services.length > 0;
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20 font-sans">
+        <div 
+        className="min-h-screen pb-20 font-sans transition-colors duration-500" style={{ backgroundColor: backgroundColor }}>
             {/* --- Banner Area --- */}
             <div className="relative">
                 <div 
@@ -153,7 +155,7 @@ const ProfileViewer = () => {
                             {page.profile_url ? (
                                 <img src={page.profile_url} alt={page.store_name || "Profile"} className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-3xl font-bold">
+                                <div className="w-full h-full flex items-center justify-center text-3xl font-bold" style={{ color: textColor }}>
                                     {(page.store_name || "S").charAt(0)}
                                 </div>
                             )}
@@ -162,8 +164,8 @@ const ProfileViewer = () => {
                     </div>
 
                     <div className="text-center mt-3 max-w-lg">
-                        <h1 className="text-2xl font-bold text-gray-900 leading-tight">{page.store_name}</h1>
-                        <div className="flex items-center justify-center gap-1 text-gray-500 text-sm mt-1">
+                        <h1 className="text-2xl font-bold leading-tight" style={{ color: textColor }}>{page.store_name}</h1>
+                        <div className="flex items-center justify-center gap-1 text-sm mt-1" style={{ color: textColor }}>
                             {page.address && (
                                 <>
                                     <MapPin size={14} />
@@ -172,7 +174,7 @@ const ProfileViewer = () => {
                             )}
                         </div>
                         {page.bio && (
-                            <p className="text-gray-600 mt-2 text-sm leading-relaxed px-4">{page.bio}</p>
+                            <p className="mt-2 text-sm leading-relaxed px-4" style={{ color: textColor }}>{page.bio}</p>
                         )}
                     </div>
 
@@ -186,8 +188,8 @@ const ProfileViewer = () => {
                 {activeTab === 'products' && (
                     <div className="animate-fade-in pb-24">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-gray-800">Destaques</h2>
-                            <span className="text-xs text-gray-500">{products.length} itens</span>
+                            <h2 className="text-lg font-bold" style={{ color: textColor }}>Shopping</h2>
+                            <span className="text-xs" style={{ color: textColor }}>{products.length} itens</span>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             {products.map(product => (
@@ -210,7 +212,7 @@ const ProfileViewer = () => {
                 {activeTab === 'services' && (
                     <div className="animate-fade-in pb-24">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-gray-800">Serviços</h2>
+                            <h2 className="text-lg font-bold" style={{ color: textColor }}>Serviços</h2>
                         </div>
                         <div className="flex flex-col">
                             {services.map(service => (
@@ -223,7 +225,7 @@ const ProfileViewer = () => {
                             ))}
                         </div>
                          {services.length === 0 && (
-                            <div className="text-center py-10 text-gray-400">Nenhum serviço disponível.</div>
+                            <div className="text-center py-10" style={{ color: textColor }}>Nenhum serviço disponível.</div>
                         )}
                     </div>
                 )}

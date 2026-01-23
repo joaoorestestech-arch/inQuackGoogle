@@ -1,6 +1,6 @@
 import React from 'react';
 import { Product } from '../types';
-import { ShoppingBag, Plus, Minus } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, Monitor, Package } from 'lucide-react'; // Adicionei ícones novos
 
 interface ProductCardProps {
   product: Product;
@@ -16,7 +16,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, primaryColor,
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow relative">
+      
+      {/* TAG DE STATUS (Físico ou Digital) */}
+      <div className="absolute top-3 left-3 z-10 flex gap-1">
+        {product.status === 'D' ? (
+          <span className="flex items-center gap-1 bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-1 rounded-lg border border-blue-200 shadow-sm uppercase tracking-wider">
+            <Monitor size={10} /> Digital
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-1 rounded-lg border border-amber-200 shadow-sm uppercase tracking-wider">
+            <Package size={10} /> Físico
+          </span>
+        )}
+      </div>
+
       <div className="relative h-48 bg-gray-100 group">
         {product.image_url ? (
           <img 
@@ -32,7 +46,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, primaryColor,
         
         {/* Quantity Badge on Image if in cart */}
         {cartQuantity > 0 && (
-            <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
+            <div className="absolute top-2 right-2 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-lg animate-in zoom-in"
                  style={{ backgroundColor: primaryColor }}>
                 {cartQuantity}
             </div>
@@ -47,7 +61,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, primaryColor,
         
         <div className="mt-auto pt-2">
             <div className="flex justify-between items-center mb-3">
-                <span className="text-xl font-bold text-gray-900">{formatPrice(product.price)}</span>
+                <span className="text-xl font-bold text-gray-900">{formatPrice(Number(product.price))}</span>
             </div>
             
             {cartQuantity === 0 ? (
@@ -81,4 +95,4 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, primaryColor,
       </div>
     </div>
   );
-};
+}

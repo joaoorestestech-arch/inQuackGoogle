@@ -85,32 +85,51 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin, onSignupSucces
 
   const handleSubmit = async () => {
     if (!plan) return;
-    
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      // 1. Criar o usuário no Supabase Auth
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: name,
             selected_plan: plan,
-            // Enviando novos dados nos metadados para serem processados pela Trigger do Banco
+
             slug: slug,
             talent: talent,
-            local: workStyle // Mapeando 'workStyle' para a coluna 'local' do schema
+            local: workStyle
           }
         }
       });
 
       if (signUpError) throw signUpError;
-      setSuccess(true);
+      if (!authData.user) throw new Error("Erro ao criar usuário.");
+
+      // 2. Chamar a Edge Function para gerar o link do Mercado Pago
+      // Usamos o invoke para chamar a função que criamos no passo anterior
+      const { data: payData, error: funcError } = await supabase.functions.invoke('mercado-pago-checkout', {
+        body: { 
+          userId: authData.user.id, 
+          email: email, 
+          plan: plan 
+        }
+      });
+
+      if (funcError) throw funcError;
+
+      // 3. Redirecionar o usuário para o Checkout do Mercado Pago
+      if (payData?.url) {
+        window.location.href = payData.url; 
+      } else {
+        throw new Error("Não foi possível gerar o link de pagamento.");
+      }
+
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar conta. Tente novamente.');
-      // Não reseta o passo totalmente para não perder dados, mantém no ultimo
-    } finally {
+      setError(err.message || 'Erro no processo de cadastro.');
       setIsLoading(false);
     }
   };
