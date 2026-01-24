@@ -91,49 +91,36 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin, onSignupSucces
 
     try {
       // 1. Criar o usuário no Supabase Auth
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name,
-            selected_plan: plan,
-
-            slug: slug,
-            talent: talent,
-            local: workStyle
-          }
-        }
-      });
-
-      if (signUpError) throw signUpError;
-      if (!authData.user) throw new Error("Erro ao criar usuário.");
-
-      // 2. Chamar a Edge Function para gerar o link do Mercado Pago
-      // Usamos o invoke para chamar a função que criamos no passo anterior
-      const { data: payData, error: funcError } = await supabase.functions.invoke('mercado-pago-checkout', {
-        body: { 
-          userId: authData.user.id, 
-          email: email, 
-          plan: plan 
-        }
-      });
-
-      if (funcError) throw funcError;
-
-      // 3. Redirecionar o usuário para o Checkout do Mercado Pago
-      if (payData?.url) {
-        window.location.href = payData.url; 
-      } else {
-        throw new Error("Não foi possível gerar o link de pagamento.");
+     // 1. Auth
+    const { data: authData, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name }
       }
+    });
+    if (error) throw error;
 
+    // 2. Profile
+    await supabase.from('profiles').insert({
+      id: authData.user.id,
+      email,
+      name,
+      slug,
+      talent,
+      local: workStyle,
+      plan: 'free',
+      paymentState: 'pending'
+    });
+      // 3. Sucesso
+      setSuccess(true);
     } catch (err: any) {
-      setError(err.message || 'Erro no processo de cadastro.');
+      setError(err.message || "Ocorreu um erro durante o cadastro.");
+    } finally {
       setIsLoading(false);
     }
-  };
-
+  }
+  
   // --- VIEW: SUCESSO ---
   if (success) {
     return (

@@ -50,13 +50,14 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from '../lib/supabase';
 import Logo from '../img/logoQuack.svg?react';
 import CRM from './CRM';
+import Billing from './Billing';  
 
 interface DashboardProps {
   user: { name: string; email: string } | null;
   onLogout: () => void;
 }
 
-type Tab = 'home' | 'inbox' | 'quackpage' | 'sales' | 'menu' | 'products' | 'agenda' | 'ia';
+type Tab = 'home' | 'inbox' | 'quackpage' | 'sales' | 'menu' | 'products' | 'agenda' | 'ia' | 'clients' | 'billing';
 type AgendaSubTab = 'requests' | 'services' | 'hours';
 type SalesFilter = 'weekly' | 'semiannual';
 type InboxFilter = 'all' | 'products' | 'agenda' | 'payments';
@@ -1553,33 +1554,37 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   );
 
   const renderMenu = () => (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <h3 className="text-2xl font-black text-brand-dark tracking-tight">Configurações</h3>
-      
-      <div className="space-y-6">
-        <div>
-          <h4 className="text-xs font-bold text-brand-muted uppercase tracking-[0.2em] mb-4 px-4">Minha Conta</h4>
-          <div className="bg-white rounded-[1.5rem] border border-gray-50 shadow-sm overflow-hidden divide-y divide-gray-50">
-            {[
-              { icon: <User size={20} />, label: 'Informação Pessoal', desc: 'Edite seus dados de perfil' },
-              { icon: <Zap size={20} />, label: 'Planos de Assinatura', desc: 'Gerencie seu plano atual' },
-              { icon: <CreditCard size={20} />, label: 'Métodos de Pagamento', desc: 'Configurações de recebimento' },
-            ].map((item, i) => (
-              <button key={i} className="w-full flex items-center justify-between p-6 hover:bg-brand-soft transition-all group">
-                <div className="flex items-center gap-4 text-left">
-                  <div className="w-10 h-10 bg-brand-soft rounded-xl flex items-center justify-center text-brand-muted group-hover:bg-brand-primary group-hover:text-brand-dark transition-all">
-                    {item.icon}
-                  </div>
-                  <div>
-                    <p className="font-bold text-brand-dark text-sm">{item.label}</p>
-                    <p className="text-[10px] text-brand-muted font-medium">{item.desc}</p>
-                  </div>
+  <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+    <h3 className="text-2xl font-black text-brand-dark tracking-tight">Configurações</h3>
+    
+    <div className="space-y-6">
+      <div>
+        <h4 className="text-xs font-bold text-brand-muted uppercase tracking-[0.2em] mb-4 px-4">Minha Conta</h4>
+        <div className="bg-white rounded-[1.5rem] border border-gray-50 shadow-sm overflow-hidden divide-y divide-gray-50">
+          {[
+            { icon: <User size={20} />, label: 'Informação Pessoal', desc: 'Edite seus dados de perfil', target: 'profile' },
+            { icon: <Zap size={20} />, label: 'Planos de Assinatura', desc: 'Gerencie seu plano atual', target: 'billing' },
+            { icon: <CreditCard size={20} />, label: 'Métodos de Pagamento', desc: 'Configurações de recebimento', target: 'payments' },
+          ].map((item, i) => (
+              <button 
+                key={i} 
+                onClick={() => item.target === 'billing' && setActiveTab('billing')} // Garanta que esta linha existe
+                className="w-full flex items-center justify-between p-6 hover:bg-brand-soft transition-all group"
+              >
+              <div className="flex items-center gap-4 text-left">
+                <div className="w-10 h-10 bg-brand-soft rounded-xl flex items-center justify-center text-brand-muted group-hover:bg-brand-primary group-hover:text-brand-dark transition-all">
+                  {item.icon}
                 </div>
-                <ChevronRight size={18} className="text-gray-300 group-hover:text-brand-dark transition-colors" />
-              </button>
-            ))}
-          </div>
+                <div>
+                  <p className="font-bold text-brand-dark text-sm">{item.label}</p>
+                  <p className="text-[10px] text-brand-muted font-medium">{item.desc}</p>
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-gray-300 group-hover:text-brand-dark transition-colors" />
+            </button>
+          ))}
         </div>
+      </div>
 
         <div>
           <h4 className="text-xs font-bold text-brand-muted uppercase tracking-[0.2em] mb-4 px-4">Configurações do App</h4>
@@ -1724,6 +1729,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         {activeTab === 'menu' && renderMenu()}
         {activeTab === 'inbox' && renderInbox()}
         {activeTab === 'CRM' && <CRM clients={clients} />}
+        {activeTab === 'billing' && <Billing />}
         
       </main>
 
