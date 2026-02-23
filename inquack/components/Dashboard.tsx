@@ -50,13 +50,14 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from '../lib/supabase';
 import Logo from '../img/logoQuack.svg?react';
 import CRM from './CRM';
+import Billing from './Billing';  
 
 interface DashboardProps {
   user: { name: string; email: string } | null;
   onLogout: () => void;
 }
 
-type Tab = 'home' | 'inbox' | 'quackpage' | 'sales' | 'menu' | 'products' | 'agenda' | 'ia';
+type Tab = 'home' | 'inbox' | 'quackpage' | 'sales' | 'menu' | 'products' | 'agenda' | 'ia' | 'clients' | 'billing';
 type AgendaSubTab = 'requests' | 'services' | 'hours';
 type SalesFilter = 'weekly' | 'semiannual';
 type InboxFilter = 'all' | 'products' | 'agenda' | 'payments';
@@ -1545,7 +1546,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const renderMenu = () => (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <h3 className="text-2xl font-black text-brand-dark tracking-tight">Configurações</h3>
-
+      
       <div className="space-y-6">
         <div>
           <h4 className="text-xs font-bold text-brand-muted uppercase tracking-[0.2em] mb-4 px-4">Minha Conta</h4>
@@ -1713,7 +1714,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         {activeTab === 'menu' && renderMenu()}
         {activeTab === 'inbox' && renderInbox()}
         {activeTab === 'CRM' && <CRM clients={clients} />}
-
+        
       </main>
 
       {/* Product Modal */}

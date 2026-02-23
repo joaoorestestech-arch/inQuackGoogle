@@ -165,13 +165,12 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin, onSignupSucces
         password,
         options: {
           data: {
-            full_name: name || slug,
-            phone_number: phone,
+            full_name: name,
             selected_plan: plan,
+            // Enviando novos dados nos metadados para serem processados pela Trigger do Banco
             slug: slug,
             talent: talent,
-            local: workStyle,
-            experience: experience
+            local: workStyle // Mapeando 'workStyle' para a coluna 'local' do schema
           }
         }
       });
@@ -180,11 +179,12 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin, onSignupSucces
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || 'Erro ao criar conta. Tente novamente.');
+      // Não reseta o passo totalmente para não perder dados, mantém no ultimo
     } finally {
       setIsLoading(false);
     }
-  };
-
+  }
+  
   // --- VIEW: SUCESSO ---
   if (success) {
     return (

@@ -161,18 +161,16 @@ export const CartModal: React.FC<CartModalProps> = ({ cart, page, onClose, onAdd
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Endereço de Entrega</label>
-                            <div className="relative">
-                                <MapPin className="absolute left-3 top-3 text-gray-400" size={18} />
-                                <textarea 
-                                    required
-                                    rows={2}
-                                    placeholder="Rua, Número, Bairro, Cidade..."
-                                    className="w-full pl-10 p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all resize-none"
-                                    value={formData.address}
-                                    onChange={e => setFormData({...formData, address: e.target.value})}
-                                />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Endereço de Retirada</label>
+                        <div className="relative flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                            <MapPin className="text-orange-500 shrink-0" size={20} />
+                            <div className="text-sm text-gray-600">
+                            <p className="font-semibold text-gray-800">Retirada no local:</p>
+                            <p>{page.address || 'Endereço não informado'}</p>
                             </div>
+                        </div>
+                        {/* Input oculto para garantir que o endereço seja enviado no formData ao salvar no banco */}
+                        <input type="hidden" value={page.address || ''} />
                         </div>
 
                         <div>
