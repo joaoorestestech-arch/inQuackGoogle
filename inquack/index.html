@@ -1,61 +1,72 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>inQuack | Alavanque seu Negócio</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Montserrat:wght@400;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              brand: {
-                primary: '#F9CE69',
-                soft: '#EEF2F5',
-                muted: '#525252',
-                bg: '#F1F1F1',
-                dark: '#1B1B1B',
-              }
-            },
-            fontFamily: {
-              manrope: ['Manrope', 'sans-serif'],
-              montserrat: ['Montserrat', 'sans-serif'],
-              roboto: ['Roboto', 'sans-serif'],
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>inQuack | Alavanque seu Negócio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Montserrat:wght@400;600;700&family=Roboto:wght@400;500&display=swap"
+    rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#F9CE69',
+              soft: '#EEF2F5',
+              muted: '#525252',
+              bg: '#F1F1F1',
+              dark: '#1B1B1B',
             }
+          },
+          fontFamily: {
+            manrope: ['Manrope', 'sans-serif'],
+            montserrat: ['Montserrat', 'sans-serif'],
+            roboto: ['Roboto', 'sans-serif'],
           }
         }
       }
-    </script>
-    <style>
-      body {
-        font-family: 'Manrope', sans-serif;
-        background-color: #F1F1F1;
-        color: #1B1B1B;
-        overflow-x: hidden;
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Manrope', sans-serif;
+      background-color: #fbfaf9;
+      color: #1B1B1B;
+      overflow-x: hidden;
+    }
+
+    .glass-card {
+      background: #fbfaf9;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    @keyframes scroll {
+      0% {
+        transform: translateX(0);
       }
-      .glass-card {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+
+      100% {
+        transform: translateX(-50%);
       }
-      .bento-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.5rem;
-      }
-      @keyframes scroll {
-        0% { transform: translateX(0); }
-        100% { transform: translateX(-50%); }
-      }
-      .animate-scroll {
-        animation: scroll 30s linear infinite;
-      }
-    </style>
+    }
+
+    .animate-scroll {
+      animation: scroll 30s linear infinite;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -68,10 +79,12 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
-    <div id="root"></div>
+
+<body>
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

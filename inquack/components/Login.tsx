@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import Register from '../img/logoRegisterQuack.svg?react';
+import LogoQuack from '../img/logoQuack.svg?react';
+import StarIcon from '../img/star.png';
 
 interface LoginProps {
   onBack: () => void;
@@ -13,6 +14,7 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup, onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +30,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup, onLoginSuccess 
       });
 
       if (authError) throw authError;
-      
+
       onLoginSuccess({
         name: data.user?.user_metadata?.full_name || email.split('@')[0],
         email: data.user?.email || email
@@ -40,97 +42,126 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup, onLoginSuccess 
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Erro ao realizar login com Google.');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-brand-bg flex flex-col md:flex-row">
-      {/* Side Panel */}
-      <div className="hidden md:flex flex-1 bg-brand-dark p-16 flex-col justify-between text-white relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-12">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xl text-brand-dark">
-              <Register style={{width: '38px'}} />
-            </div>
-            <span className="text-2xl font-bold tracking-tight">inQuack</span>
+    <div className="min-h-screen bg-gradient-to-b from-[#FFFDF6] via-[#FDF4D1] to-[#F7E7A9] relative overflow-hidden flex flex-col items-center justify-center p-4">
+      {/* Background Pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.10]"
+        style={{
+          backgroundImage: `url(${StarIcon})`,
+          backgroundSize: '40px 40px',
+          backgroundRepeat: 'repeat'
+        }}
+      ></div>
+
+      <div className="relative z-10 w-full max-w-[440px] flex flex-col items-center">
+        {/* Header */}
+        <div className="mb-8 text-center flex flex-col items-center">
+          <div className="mb-6">
+            <LogoQuack style={{ width: '80px', height: '80px' }} />
           </div>
-          <h2 className="text-5xl font-extrabold mb-6 leading-tight">Prepare seu negócio para o próximo nível.</h2>
-          <p className="text-xl text-gray-400 max-w-md">O painel onde a mágica acontece. Seus relatórios, clientes e microsites a um clique de distância.</p>
-        </div>
-        
-        <div className="relative z-10">
-          <div className="p-6 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-md">
-            <p className="italic text-gray-300 mb-4">"A inQuack mudou a forma como eu gerencio meus clientes. Hoje vendo 2x mais sem precisar de uma secretária."</p>
-            <div className="font-bold">— Marina Costa, Proprietária do Studio MC</div>
-          </div>
-        </div>
-
-        <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-brand-primary/20 rounded-full blur-[100px]"></div>
-      </div>
-
-      {/* Main Area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4 bg-white md:bg-brand-bg">
-        <div className="w-full max-w-md">
-          <button 
-            onClick={onBack}
-            className="flex items-center gap-2 text-brand-muted hover:text-brand-dark font-medium mb-12 transition-colors"
-          >
-            <ArrowLeft size={18} />
-            Voltar para o site
-          </button>
-
-          <div className="bg-white py-10 px-6 rounded-[1.5rem] shadow-xl shadow-brand-dark/5 border border-gray-100">
-            <h1 className="text-3xl font-black text-brand-dark mb-2">Bem-vindo de volta!</h1>
-            <p className="text-brand-muted mb-8">Insira suas credenciais para acessar o painel.</p>
-
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl flex items-center gap-3 text-sm">
-                <AlertCircle size={18} />
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-brand-dark mb-2">Email Profissional</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                  <input 
-                    type="email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="ex: voce@empresa.com"
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-brand-soft border border-transparent focus:border-brand-primary focus:bg-white outline-none transition-all font-medium"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-brand-dark mb-2">Senha</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                  <input 
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-brand-soft border border-transparent focus:border-brand-primary focus:bg-white outline-none transition-all font-medium"
-                    required
-                  />
-                </div>
-              </div>
-
-              <button 
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-4 bg-brand-dark text-white rounded-2xl font-bold text-lg hover:bg-brand-muted transition-all flex items-center justify-center gap-2 disabled:opacity-70"
-              >
-                {isLoading ? <Loader2 className="animate-spin" /> : "Entrar no Painel"}
-              </button>
-            </form>
-
-            <p className="text-center mt-10 text-brand-muted font-medium">
-              Não tem uma conta? <button onClick={onSwitchToSignup} className="text-brand-dark font-bold hover:underline">Criar agora</button>
+          <div className="mb-4 text-center space-y-3">
+            <h1 className="text-4xl md:text-5xl font-medium text-stone-900 font-display tracking-tight leading-tight">
+              Bem vindo de volta
+            </h1>
+            <p className="text-[#555555] text-lg leading-relaxed max-w-[440px]">
+              Sentimos sua falta, que tal transformamos seu negócio em algo grandioso?
             </p>
           </div>
+        </div>
+
+        {error && (
+          <div className="w-full mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl flex items-center gap-3 text-sm animate-in fade-in slide-in-from-top-1">
+            <AlertCircle size={18} />
+            {error}
+          </div>
+        )}
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="w-full space-y-4">
+          <div className="relative">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="w-full px-5 py-4 rounded-xl bg-white border border-[#E5E5E5] focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 outline-none transition-all text-lg"
+              required
+            />
+          </div>
+
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Senha"
+              className="w-full px-5 py-4 rounded-xl bg-white border border-[#E5E5E5] focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 outline-none transition-all text-lg pr-12"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 py-2">
+            <div className="h-[1px] flex-1 bg-[#D2D2D2]"></div>
+            <span className="text-[#888888] text-sm">ou</span>
+            <div className="h-[1px] flex-1 bg-[#D2D2D2]"></div>
+          </div>
+
+          {/* Google Button */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            className="w-full py-4 bg-white hover:bg-gray-50 border border-[#E5E5E5] rounded-xl font-semibold text-gray-700 transition-all flex items-center justify-center gap-3"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+            Continuar com o Google
+          </button>
+
+          <div className="text-center">
+            <button type="button" className="text-[#8e8e8e] hover:text-black transition-colors text-sm font-medium">
+              Esqueceu sua senha?
+            </button>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-5 bg-[#111111] text-white rounded-xl font-bold text-xl hover:bg-[#222222] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 mt-4"
+          >
+            {isLoading ? <Loader2 className="animate-spin" /> : "Entrar"}
+          </button>
+        </form>
+
+        <div className="mt-8 text-center flex flex-col gap-6">
+          <p className="text-[11px] text-[#8e8e8e] leading-relaxed max-w-[320px]">
+            Ao continuar, você concorda com nossos <a href="#" className="underline">Termos de Serviço</a> e <a href="#" className="underline">Política de Privacidade</a>.
+          </p>
+
+          <p className="text-[#555555]">
+            Não tem uma conta? <button onClick={onSwitchToSignup} className="text-black font-bold hover:underline">Criar agora.</button>
+          </p>
         </div>
       </div>
     </div>

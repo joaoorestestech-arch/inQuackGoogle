@@ -4,13 +4,15 @@ import { supabase } from './lib/supabase'; // Certifique-se de que o caminho est
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Features from './components/Features';
-import AppShowcase from './components/AppShowcase';
+import Benefits from './components/Benefits';
 import Pricing from './components/Pricing';
-import Clients from './components/Clients';
+
 import Footer from './components/Footer';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import Dashboard from './components/Dashboard';
+import FAQ from './components/FAQ';
+import CTASection from './components/CTASection';
 
 const App: React.FC = () => {
   // Estado inicial como 'landing' e user null
@@ -22,11 +24,11 @@ const App: React.FC = () => {
     // 1. Verificar se existe uma sessão salva no LocalStorage ao carregar a página
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (session) {
-        setUser({ 
-          name: session.user.user_metadata.name || 'Empreendedor', 
-          email: session.user.email || '' 
+        setUser({
+          name: session.user.user_metadata.name || 'Empreendedor',
+          email: session.user.email || ''
         });
         setView('dashboard');
       }
@@ -38,9 +40,9 @@ const App: React.FC = () => {
     // 2. Ouvir mudanças na autenticação (Login, Logout, Token Refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        setUser({ 
-          name: session.user.user_metadata.name || 'Empreendedor', 
-          email: session.user.email || '' 
+        setUser({
+          name: session.user.user_metadata.name || 'Empreendedor',
+          email: session.user.email || ''
         });
         setView('dashboard');
       } else {
@@ -78,9 +80,9 @@ const App: React.FC = () => {
 
   if (view === 'login') {
     return (
-      <Login 
-        onBack={() => setView('landing')} 
-        onSwitchToSignup={() => setView('signup')} 
+      <Login
+        onBack={() => setView('landing')}
+        onSwitchToSignup={() => setView('signup')}
         onLoginSuccess={handleLoginSuccess}
       />
     );
@@ -88,9 +90,9 @@ const App: React.FC = () => {
 
   if (view === 'signup') {
     return (
-      <Signup 
-        onBack={() => setView('landing')} 
-        onSwitchToLogin={() => setView('login')} 
+      <Signup
+        onBack={() => setView('landing')}
+        onSwitchToLogin={() => setView('login')}
         onSignupSuccess={(userData) => handleLoginSuccess(userData)}
       />
     );
@@ -102,19 +104,22 @@ const App: React.FC = () => {
       <main>
         <Hero onStart={() => setView('signup')} />
         <div id="features">
-          <Features />
+          <Features onSignup={() => setView('signup')} />
         </div>
-        <div id="showcase">
-          <AppShowcase />
+        <div id="benefits">
+          <Benefits onStart={() => setView('signup')} />
         </div>
         <div id="pricing">
           <Pricing onSelectPlan={() => setView('signup')} />
         </div>
-        <div id="clients">
-          <Clients />
+        <div id="faq">
+          <FAQ />
+        </div>
+        <div id="cta">
+          <CTASection onSignup={() => setView('signup')} />
         </div>
       </main>
-      <Footer />
+      <Footer onLogin={() => setView('login')} />
     </div>
   );
 };
